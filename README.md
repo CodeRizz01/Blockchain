@@ -386,3 +386,102 @@ http://localhost:5000/mine
 
 <img width="645" height="376" alt="image" src="https://github.com/user-attachments/assets/b0319697-80b3-48fa-aa66-5d4d5dc3eeb6" />
 
+*Using Postman to make a GET request*
+
+Let's create a new transaction by making a POST request to 
+http://localhost:5000/transaction/new
+
+with a body containg our transaction structure
+
+<img width="652" height="386" alt="image" src="https://github.com/user-attachments/assets/d76018c0-3140-4d03-8482-c25d3bdabc47" />
+
+*Using postman to make a POST request*
+**Now Inspect the full chain by requesting:**
+http://localhost:5000/chain
+
+<img width="499" height="913" alt="image" src="https://github.com/user-attachments/assets/49ab08b4-0f38-485b-b704-8a03b082f132" />
+
+
+# Step 4: Consensus
+
+The whole point of blochachain is that they should be *decentralized* how to ensure or determine that they all reflect the same chain -- This is kniwn as **Problem of Consensus** and we'll have to implement a Consensus algorithm if we want more than one node in network.
+
+**Registering New Nodes:**
+Now, we need a way to let a node know about neighbouring nodes on the network. Each nodes on our network should keep a registry of the other nodes on the network. 
+
+Thus, we need some endpoints: 
+
+- nodes/register --> To accept a list of new nodes in the form of URLs
+- nodes/resolve --> To implement our Consensus ALgorithm, which resolves any conflicts--to ensut=re a node hs the correct                      chain.
+
+we need ot modify the blockchchain's constructor and provide a meyhod for registering nodes:
+
+      ...
+      from urllib.parse import urlparse
+      ...
+
+      class Blockchain(object):
+            def __init__(self):
+                  ...
+                  self.nodes = set()
+                  ...
+
+            def regiteer_node(self, address):
+                  """ Add a new node to the list of noes
+                  :address: <str> Address of node. Eg: 'http://192.168.0:5000'
+                  :return: None
+                  """
+
+                  parsed_url = urlparse(address)
+                  self.nodes.add(parsed_url.netloc)
+
+*A methid for adding neighbouring nodes to out network*
+
+**Note** We've used a set() to hold the list of nodes.
+
+This is a cheap way of ensurig that the audition of new nodes is idempotent. i.e no matter how many times we add a specific node, it appears exactly once.
+
+# Implenting the Consessus Algorithm 
+
+A conflict is whoen one node has a different chain to another node. The rule is that the ***Longest valod chain is authoritative***. In other words, the longest chain on then etwork is the de-facto one. Using this algorithm, we reach *Consensus* amongst the nodes in out network. 
+
+      ...
+      import request
+
+      class Blockchain(object)
+            ...
+
+            def valid_chain(self, chain):
+                  """ Determine if a given blockchain is valid
+                  :chain: <list> A Blockchain
+                  :return: <bool> True if valid, False if not
+                  """
+
+                  last_block = chain[0]
+                  current_index = 1
+
+                  while current_index < len(chain):
+                        block = chain[current_index]
+                        print(f'{last_block}')
+                        print(f'{block}')
+
+                        # Chact that the hash of the block is correct
+                        if block['previous'] != self.hast(last_block):
+                              return False
+
+                        # Chach thta the proof of Work is Correct
+                        if not self.valid_proof(last_block['proof'], block['proof']):
+                              return False
+
+                        last_block = block
+                        current_index += 1
+                  return True
+
+            def resolve_conflicts(self):
+                  """ This is our Consensus Algorithm, it resolves conflicts by replacing our chain with the longest one i                        netwok
+                  :return: <bool> True if our chain is replaces, False if not
+                  """
+
+                  
+
+
