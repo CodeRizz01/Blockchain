@@ -13,28 +13,30 @@ create a 'Blockchain' class whose constructor crreates an initial empty list (to
 
 *Here the example codeview:*
 
-class Blochchain(objcet):
-  def __init__(self):
-  self.chian = []
-  self.current_transaction = []
+      class Blochchain(objcet):
+          def __init__(self):
+              self.chain = []
+              self.current_transaction = []
 
-  def new_block(self):
-  *Creates a new Block and adds it to the chain*
-    pass
+          def new_block(self):
+          
+          # Creates a new Block and adds it to the chain*
+              pass
 
-  def new_transatction(self):
-    **Adds a new transaction to the list of transactions**
-      pass
+      def new_transatction(self):
+          # Adds a new transaction to the list of transactions
+              pass
 
-  @staticmethod
-  def hash(block):
-    *Hashes a block*
-    pass
+      @staticmethod
+      def hash(block):
+        # Hashes a block
+          pass
 
-  @property
-  def last_block(self):
-    *Returns the last Block in the chain*
-    pass
+      @property
+      def last_block(self):
+        # Returns the last Block in the chain*
+          pass
+
 
 Our *Blockchain* is responsible for managning the chain. It will store transactions and have some helper methods for adding new blocks to the chain.
 
@@ -43,6 +45,344 @@ Our *Blockchain* is responsible for managning the chain. It will store transacti
 <img width="735" height="344" alt="image" src="https://github.com/user-attachments/assets/1a307100-17df-4821-8bc9-a4147c755574" />
 
 
+# Adding Transactions to a Block
+Now We need a way of adding transactions to a Block. Our *new_transaction()* method is responsible for this, 
 
+      class Blockchain(object):
+    ...
+    
+    def new_transaction(self, sender, recipient, amount):
+        """
+        Creates a new transaction to go into the next mined Block
+        :param sender: <str> Address of the Sender
+        :param recipient: <str> Address of the Recipient
+        :param amount: <int> Amount
+        :return: <int> The index of the Block that will hold this transaction
+        """
+
+        self.current_transactions.append({
+            'sender': sender,
+            'recipient': recipient,
+            'amount': amount,
+        })
+
+        return self.last_block['index'] + 1
+
+After *new_transaction()* is instantiated we’ll need to seed it with a genesis block—a block with no predecessors. Thus, we also need to add a “proof” to our genesis block which is the result of mining (or proof of work). In addition to creating the genesis block in our constructor
+
+Thus we need the method for: 
+
+new_block, new_transaction and has()
+
+    import hashlib
+    import json
+    from time import time
+
+
+    class Blockchain(object):
+    def __init__(self):
+        self.current_transactions = []
+        self.chain = []
+
+        # Create the genesis block
+        self.new_block(previous_hash=1, proof=100)
+
+    def new_block(self, proof, previous_hash=None):
+        """
+        Create a new Block in the Blockchain
+        :param proof: <int> The proof given by the Proof of Work algorithm
+        :param previous_hash: (Optional) <str> Hash of previous Block
+        :return: <dict> New Block
+        """
+
+        block = {
+            'index': len(self.chain) + 1,
+            'timestamp': time(),
+            'transactions': self.current_transactions,
+            'proof': proof,
+            'previous_hash': previous_hash or self.hash(self.chain[-1]),
+        }
+
+        # Reset the current list of transactions
+        self.current_transactions = []
+
+        self.chain.append(block)
+        return block
+
+    def new_transaction(self, sender, recipient, amount):
+        """
+        Creates a new transaction to go into the next mined Block
+        :param sender: <str> Address of the Sender
+        :param recipient: <str> Address of the Recipient
+        :param amount: <int> Amount
+        :return: <int> The index of the Block that will hold this transaction
+        """
+        self.current_transactions.append({
+            'sender': sender,
+            'recipient': recipient,
+            'amount': amount,
+        })
+
+        return self.last_block['index'] + 1
+
+    @property
+    def last_block(self):
+        return self.chain[-1]
+
+    @staticmethod
+    def hash(block):
+        """
+        Creates a SHA-256 hash of a Block
+        :param block: <dict> Block
+        :return: <str>
+        """
+
+        # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
+        block_string = json.dumps(block, sort_keys=True).encode()
+        return hashlib.sha256(block_string).hexdigest()
+
+
+# Undersatnding Proof of Work
+
+A Proof of Work algorithm (PoW) is how new Blocks are created or mined on the blockchain. The goal of PoW is to discover a number which solves a problem. The number must be difficult to find but easy to verify— This is the core idea behind Proof of Work.
+
+
+Let’s decide that the hash of some integer x multiplied by another y must end in 0. So,
+
+hash(x * y) = ac23dc...0
+And for this simplified example, let’s fix
+x = 5
+
+# Implementing this in Python:
+
+    from hashlib import sha256
+    x = 5
+    y = 0  # We don't know what y should be yet...
+    while sha256(f'{x*y}'.encode()).hexdigest()[-1] != "0":
+        y += 1
+    print(f'The solution is y = {y}')
+
+The solution is y = 21, and since the produced hash ends in 0
+
+    hash(5 * 21) = 1253e9373e...5e3600155e860
+
+In Bitcoin, the Proof of Work algorithm is called Hashcash. It’s the algorithm that miners race to solve in order to create a new block. the difficulty is determined by the number of characters searched for in a string. The miners are then rewarded for their solution by receiving a coin—in a transaction.
+
+# Implementing basic Proof of Work
+
+***Find a number p that when hashed with the previous block’s solution a hash with 4 leading 0s is produced***.
+
+    import hashlib
+    import json
+
+    from time import time
+    from uuid import uuid4
+
+
+    class Blockchain(object):
+    ...
+        
+    def proof_of_work(self, last_proof):
+        """
+        Simple Proof of Work Algorithm:
+         - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
+         - p is the previous proof, and p' is the new proof
+        :param last_proof: <int>
+        :return: <int>
+        """
+
+        proof = 0
+        while self.valid_proof(last_proof, proof) is False:
+            proof += 1
+
+        return proof
+
+    @staticmethod
+    def valid_proof(last_proof, proof):
+        """
+        Validates the Proof: Does hash(last_proof, proof) contain 4 leading zeroes?
+        :param last_proof: <int> Previous Proof
+        :param proof: <int> Current Proof
+        :return: <bool> True if correct, False if not.
+        """
+
+        guess = f'{last_proof}{proof}'.encode()
+        guess_hash = hashlib.sha256(guess).hexdigest()
+        return guess_hash[:4] == "0000"
+
+
+To adjust the difficulty of the algorithm, we could modify the number of leading zeroes. But 4 is sufficient. The addition of a single leading zero makes a mammoth difference to the time required to find a solution.
+
+# Step 2: Our Blockchain as an API
+
+The Python Flask Framework. It’s a micro-framework and it makes it easy to map endpoints to Python functions. This allows us talk to our blockchain over the web using HTTP requests.
+
+Now, we will introduce 3 methods:
+- transaction/new --> to create a new transaction to a block
+- /mine --> to tell our server to mine a new block.
+- /chain --> to return the full Blockchain
+
+# Setting up flask
+
+The “server” will form a single node in our blockchain network.
+
+    import hashlib
+    import json
+    from textwrap import dedent
+    from time import time
+    from uuid import uuid4
+
+    from flask import Flask
+
+
+    class Blockchain(object):
+    ...
+
+
+    # Instantiate our Node
+    app = Flask(__name__)
+
+    # Generate a globally unique address for this node
+    node_identifier = str(uuid4()).replace('-', '')
+
+    # Instantiate the Blockchain
+    blockchain = Blockchain()
+
+
+    @app.route('/mine', methods=['GET'])
+    def mine():
+        return "We'll mine a new Block"
   
+    @app.route('/transactions/new', methods=['POST'])
+    def new_transaction():
+        return "We'll add a new transaction"
+
+    @app.route('/chain', methods=['GET'])
+    def full_chain():
+        response = {
+            'chain': blockchain.chain,
+            'length': len(blockchain.chain),
+        }
+        return jsonify(response), 200
+
+    if __name__ == '__main__':
+        app.run(host='0.0.0.0', port=5000) 
+
+What we added above is:
+
+- Line 15: Instantiates our Node. Read more about Flask here.
   
+- Line 18: Create a random name for our node.
+  
+- Line 21: Instantiate our blockchain
+
+- Line 24–26: Create the /mine endpoint which is a POST request since we'll be sending data to it 
+
+- Line 28–30: Create the *transaction/new* endpoint which is a POST
+
+- Line 40–41: Runs the server on port 5000.
+
+
+# The Transactions Endpoint:
+
+This is what the request for a transaction will look like. It’s what the user sends to the server:
+
+<img width="347" height="144" alt="image" src="https://github.com/user-attachments/assets/a4b615ef-88e8-4d1b-a3ca-7ccaacfdaf58" />
+
+**Let’s write the function for adding transactions:**
+
+    import hashlib
+    import json
+    from textwrap import dedent
+    from time import time
+    from uuid import uuid4
+
+    from flask import Flask, jsonify, request
+
+    ...
+
+    @app.route('/transactions/new', methods=['POST'])
+    def new_transaction():
+      values = request.get_json()
+
+      # Check that the required fields are in the POST'ed data
+        required = ['sender', 'recipient', 'amount']
+        if not all(k in values for k in required):
+          return 'Missing values', 400
+
+      # Create a new Transaction
+      index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
+
+      response = {'message': f'Transaction will be added to Block {index}'}
+      return jsonify(response), 201
+
+
+*(A method for creating Transactions)*
+
+# The Mining Endpoint
+
+**Our mining endpoint is where the magic happens, It has to do three things:**
+
+- Calculate the Proof of Work
+  
+- Reward the miner (us) by adding a transaction granting us 1 coin
+  
+- Forge the new Block by adding it to the chain
+
+      import hashlib
+      import json
+
+      from time import time
+      from uuid import uuid4
+
+      from flask import Flask, jsonify, request
+
+      ...
+
+      @app.route('/mine', methods=['GET'])
+      def mine():
+          # We run the proof of work algorithm to get the next proof...
+          last_block = blockchain.last_block
+          last_proof = last_block['proof']
+          proof = blockchain.proof_of_work(last_proof)
+
+      # We must receive a reward for finding the proof.
+      # The sender is "0" to signify that this node has mined a new coin.
+      blockchain.new_transaction(
+        sender="0",
+        recipient=node_identifier,
+        amount=1,
+      )
+
+      # Forge the new Block by adding it to the chain
+      previous_hash = blockchain.hash(last_block)
+      block = blockchain.new_block(proof, previous_hash)
+
+      response = {
+          'message': "New Block Forged",
+          'index': block['index'],
+          'transactions': block['transactions'],
+          'proof': block['proof'],
+          'previous_hash': block['previous_hash'],
+      }
+  
+      return jsonify(response), 200
+
+
+**Note** --> *that the recipient of the mined block is the address of our node.*
+  
+
+# Step 3: Interacting with our Blockchain
+
+You can use plain old cURL or Postman to interact with our API over a network.
+
+Fire up the server:
+
+    $ python blockchain.py
+    * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+
+Let’s try mining a block by making a GET request to
+http://localhost:5000/mine
+
+<img width="645" height="376" alt="image" src="https://github.com/user-attachments/assets/b0319697-80b3-48fa-aa66-5d4d5dc3eeb6" />
+
