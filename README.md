@@ -482,7 +482,77 @@ A conflict is whoen one node has a different chain to another node. The rule is 
                   :return: <bool> True if our chain is replaces, False if not
                   """
 
-                  
-                  
+                  neighbours = self.nodes
+                  new_chain = None
 
+                  # Looking for the chain that are longer than ours
+                  max_length = len(slef.chain)
+
+                  # Grab and verify the chains fro all the nodes in our networks
+                  for nodes in neighbours:
+                        response = requests.get(f'http://{node}/chain')
+
+                        if respone.status_code == 20:
+                              length = response.json()['length']
+                              chain = response.json()['chain']
+
+                              # Check if the length is longer and chain is valid
+                              if length > max_length and self.valid_chain(chain):
+                                    max_length = length
+                                    new_chain = chain
+
+                              # Replace our chain if we discovered a new, valid chain longer than ours
+                              if new_chain:
+                                    self.chain = new_chain
+                                    return True
+
+                              return False
+
+The First method *valid_chain()* is responsible for chacking if a chain is valid by looping through each block and verifying both hash and proof. 
+
+*resolve_conflicts()* is a method which loops through all tghe neighbours nodes, *downlaods* their chain and verifies them using the above method 
+
+**If a valid chain is found, whose length is greater than ours, we replace ours**.
+
+Let's register 2 Endpoints to i=our API, one for adding neighbouring nodes and the anotehr for resolving conflicts:
+
+      @app.route('/nodes/register', methids=[POST])
+      def register_nodes():
+            values = request.get_json()
+
+            nodes = values.get('nodes')
+            if nodes is None:
+                  return "Error: Please give a valid list of nodes", 400
+
+            for node in nodes:
+                  blockchain.register_node(node)
+
+            response = {
+
+                  'message': "New nodes have been added",
+                  'total_nodes': list(blockchain),
+            }
+
+            return jsonify(response), 201
+
+      @app.route('/nodes/resolve', methods=['GET'])
+      def consensus():
+            replaced = blockchain.resolve_conflicts()
+
+            if replaced:
+                  response = {
+                        'message': 'Our chain was replaced'
+                        'new_chain': blockchain.chain
+                  }
+
+            else:
+                  response = {
+                        'message': 'Our chain was replaced'
+                        'chian': blockchain.chain
+                  }
+
+            return jsonify(response), 200
+
+
+Comsesus algorithm at work...
 
