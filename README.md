@@ -559,9 +559,9 @@ Comsesus algorithm at work...
 
 
 
-#Now, Step by step working of the actual Code: Blockhain.py
+# Now, Step by step working of the actual Code: Blockhain.py
 
-#Execution Flowchart:
+# Execution Flowchart:
 
 <img width="883" height="1008" alt="image" src="https://github.com/user-attachments/assets/bf1f4d6e-8ba4-4956-b73c-33b070b15646" />
 
