@@ -556,3 +556,103 @@ Let's register 2 Endpoints to i=our API, one for adding neighbouring nodes and t
 
 Comsesus algorithm at work...
 
+
+
+
+#Now, Step by step working of the actual Code: Blockhain.py
+
+#Execution Flowchart:
+
+<img width="883" height="1008" alt="image" src="https://github.com/user-attachments/assets/bf1f4d6e-8ba4-4956-b73c-33b070b15646" />
+
+
+# Step 1: --> Python finds the starting points
+      
+      if __name__ == '__main__':
+
+This is the first line Python looks for. i.e Ony run the code if you launched this exact file directly.
+It is the main entrance of the program -- like the  front door of a shop
+
+# Step 2: --> Two important things are created
+      
+      app = flask(__name__)
+      node_identifier = str(uuid4()).replace('-', '')
+      blockchain  = Blockchain
+
+Flask is the micro framework that let's your Python code talk to the internet --> recieving requests and sending back responses. Blockchain() creates a brand-new blockchain object. Writing Blockchain() automaticcaly triggers *step3*
+
+Step 3: --> __init__runs automatically: 
+            
+      self.current_transactions = [] # no Transactions yet
+      self.chain = [] # no Blocks yet
+      self.nodes = set() # No other computers known 
+      self.new_block(previous_hash='1', proof=100) # Genesis Block
+
+Whenever we write Blockchain(), Python calls __init__. Think of it like turning on a machine --it sets everything to zero and creates the very first block, called the genesis block. Every blockchain musy start with one.
+
+Step 4: --> Flask starts listening
+
+      app.run(host='0.0.0.0', port=port)
+
+The programme now sits and waits. Like a shop has opened its door --nothing happens until a customer(an HTTP request) arrives.
+
+# The Loops -- Why are they there?
+There are there main loops in the  code. Each one exists for a specific security or network reason
+
+# Loop 1 -- The Proof of Work Loop
+      
+      proof = 0
+      while self.valid_proof(last_proof, proof, last_hash) is False:
+      proof += 1
+
+This loop tries the number 0, then 1, then 2, and keeps going until it finds a number that, when combined with the previous block's info and put through a SHA-256 formula, produces a result starting with '0000'. 
+
+- This copuld take thousands --which is intentional. It makes cheating very expensive.
+
+- Think of it like a combination lock: Spinnig throgh every combination until it clicks open.
+
+# Loop 2: --> The Chain Validation Loop
+
+      while current_index < len(chain):
+      block = chain[current_index]
+      if block['previous_hash'] != last_block_hash:
+            return False
+
+            ...
+            current_index =+ 1
+
+When another computer shares its blockchain with you. you cannot just trust it.
+
+This loop walks through every single block and checks two things: 
+1: Does each block correctly point to th before it? 
+
+2: Was the proof done honestly?
+
+If either chechs fails, the whole chain is rejected immediately. This what makes blockchains tamper-proof
+
+# Loop 3: --> Checking ALL Nodes(resolve_conflits)
+
+      for node in neighbours:
+            response = requests.get(f'http://{node}/chain')
+            if length > max_length and self.valid_chain(chain):
+                  ...
+
+In real blockchain network, many computers keep copies.
+This loop asks every known computer to show its chain. If any longer valid chain than yours with theirs. 
+This is the consensus rule --the longest honest chain withn. It is how the network agrees on truth without any central authority.
+
+# The hash() Function:
+
+      block_string = json.dumps('block, sort_keys=True').encdode()
+      return hashlib.sha256(blockchain_string).hexdigest()
+
+This converts a blocks into a unique 64-character fingerprint. If even one tiny thing in the block chnages --A single leter, a single digit --The fingerprint becomes completely different
+
+This is why blocks can't be secretly edited. Changing block 3 would change its hash, which would break block's 4 *previous_hash*, which would break block's 5 and so on. The whole chain falls apart instantly --any tampering is immediatly visible. 
+
+
+
+
+  
+
+
